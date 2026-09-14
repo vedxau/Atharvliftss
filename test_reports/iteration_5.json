@@ -1,0 +1,27 @@
+{
+  "summary": "Iteration 5 verification of user-requested content changes + full regression. ALL CHECKS PASS. (1) Phone number and WhatsApp fully purged: crawled all 6 routes at both desktop (1920x1080) and mobile (390x844) — the strings '9527471066', '95274 71066', 'wa.me', 'whatsapp' and '+91' are absent from every rendered HTML (12/12 routes clean); no element with data-testid='whatsapp-float' exists on any viewport/route; WhatsAppFloat.jsx source file deleted. (2) Email + Instagram retained: Contact page shows mailto:Info@Atharvliftss.in (data-testid=contact-email) and https://instagram.com/Atharvliftss (data-testid=contact-instagram); Footer likewise. (3) Coaching packages: exactly 2 blocks — package-self-guided at ₹2,097/month and package-one-to-one at ₹4,097/month with 'Most chosen' badge; forbidden text 'In-Person', '24,000', '9,800', '4,500' all absent; both CTAs link to /contact. (4) Nutrition 'Sample Day': 09:00, 13:00, 17:00, 21:00 all render; 07:30 gone. (5) Coaching page secondary CTA 'Follow on Instagram' opens https://instagram.com/Atharvliftss. (6) Contact form regression: empty submit shows toast, valid submit renders data-testid='inquiry-success'. (7) Mobile regression: 0 hero SVG filters, grain::after display=none, 0 horizontal overflow on all 6 routes, hamburger present. (8) Desktop regression: 2 hero SVG filters, grain::after=block, lenis class present. (9) IMAGES: 100% webp on Home mobile, 4 image requests totalling 136 KB (down from ~1.5 MB — 91% reduction), no non-webp assets, no 404s. Backend pytest 5/5 green.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_inquiries.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Note: window.document.documentElement carries the 'lenis' class in Playwright mobile-viewport tests because isTouchDevice() checks 'ontouchstart' / navigator.maxTouchPoints which Playwright does not toggle just from viewport resize. On a real touch device the Lenis rAF is correctly skipped. The mobile heavy-motion gates that DO fire in the browser (matchMedia min-width:1024, hover:hover, pointer:fine) are correctly OFF — hero SVG filters count = 0, grain::after display = none — so the actual perf-critical gating is intact. If stricter test emulation is desired, use browser context with has_touch=True; not a product bug.",
+    "site.js is clean: COACH has no whatsapp/phone fields, PACKAGES has exactly 2 entries, MEALS[0].time = '09:00'.",
+    "Footer.jsx and Contact.jsx both retain email + Instagram only — no phone/WhatsApp references left in JSX."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (5/5 pytest)", "frontend": "100% of tested checks (12/12 route sweeps, all package/nutrition/form/CTA/image assertions)"},
+  "test_credentials": "None — public site.",
+  "seed_data_creation": "One TEST_Playwright inquiry submitted via UI form during regression; one TEST_Priya inquiry submitted via pytest. Both persisted to /api/inquiries.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "All iteration-5 requirements satisfied. Site is now WhatsApp/phone-free, 2-tier coaching pricing (₹2,097 + ₹4,097), 09:00 first meal, and mobile image payload is ~136 KB on Home. If future iterations touch the packages array, keep testids as 'package-self-guided' and 'package-one-to-one'.",
+  "rca of the issue": "N/A — no bugs found this iteration."
+}

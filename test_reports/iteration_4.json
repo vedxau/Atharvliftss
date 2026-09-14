@@ -1,0 +1,34 @@
+{
+  "summary": "Iteration 4: mobile performance regression fix verification + full 6-route regression + backend pytest. RESULT: mobile scrolling is now smooth. All five heavy-motion gates are correctly OFF on 390px viewport (no hero SVG filter, no Parallax layers, .grain::after display:none, Lenis not instantiated (no 'lenis' class on html), scrollTo is immediate). rAF sampling over 3s while programmatically scrolling on mobile viewport shows ~57 FPS with only 1 long frame (>50ms) out of 171 samples — well within acceptable smoothness. Desktop (1920x1080) retains the full experience: hero has 2 SVG <filter> nodes, .grain::after display:block, html carries 'lenis' class, 3 parallax mixBlend layers rendered, and after scrolling past the hero the svg style.opacity flips to '0' imperatively (no per-frame React re-render). Wordmark reads 'ATHARVLIFTSs' with cyan tail and no dumbbell icon in nav OR footer; 0 lucide-dumbbell svg in [data-testid=site-nav]. All 6 routes (/, /about, /programs, /nutrition, /coaching, /contact) load with 0 page errors and 0 horizontal overflow at 1920x1080. Backend pytest 5/5 green (root + POST/GET inquiries persist + 3 validation cases, no _id leak). IMAGE PAYLOAD: home page transferred ~1574 KB of images at mobile viewport; ONE hero image is 1102 KB (a63cefb9...jpeg) — this single asset exceeds the 400 KB threshold the user flagged and is the remaining bottleneck if any residual lag is felt on very slow devices. About page total image payload was ~284 KB (fine).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Home hero (mobile)", "issues": ["Single hero photo is 1102 KB (~1.1 MB). User explicitly authorised replacing images if they are still the cause of lag. Recommend swapping this asset for a mobile-optimised <= 250 KB JPEG/AVIF or using a <picture>/<source media> element to serve a smaller variant under 1024px viewports. All other images are already under 400 KB."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_inquiries.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [
+    "Replace or add a mobile <source> variant for the 1102 KB hero image (a63cefb9a55579834e01a09ce76e3ee14f5bef0ae8e112360425f40cffd258d8.jpeg) — this is the last remaining perf hotspot on mobile.",
+    "Minor React warning in console: 'Invalid DOM property fetchpriority. Did you mean fetchPriority?' — StoneHero.jsx uses fetchpriority=\"high\" as a JSX prop; change to fetchPriority=\"high\" (camelCase) to silence the warning (React 18/19 forwards unknown lowercase attrs but warns)."
+  ],
+  "critical_code_review_comments": [
+    "StoneHero.jsx line 57: fetchpriority should be fetchPriority (camelCase) in JSX to avoid React DOM property warning.",
+    "useHeavyMotion gate (min-width:1024 + hover:hover + pointer:fine) correctly excludes phones and tablets — iPad in touch mode will also get the lightweight path, which is the intended behaviour.",
+    "App.js Lenis instantiation is properly guarded by isTouchDevice(); rAF loop only runs on non-touch — mobile CPU is not paying that cost. Verified via absence of 'lenis' class on html when touch is emulated.",
+    "StoneHero desktop path now updates feFuncR/G/B intercept and gradient stops via ref.setAttribute inside useMotionValueEvent — no React state per scroll frame. Verified visually and via svg style.opacity going to '0' after scroll.",
+    "Parallax returns null on non-heavy — good defensive gating."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "100% (5/5 pytest)", "frontend": "100% of tested checks (mobile gating, desktop retention, 6-route regression)"},
+  "test_credentials": "None — public site.",
+  "seed_data_creation": "Backend pytest inserts TEST_Priya inquiry via /api/inquiries; no frontend contact submission this iteration (form testids not matched by initial guess but form UI verified visually and endpoint verified via pytest).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Mobile perf gating is solid: check the following invariants at 390px viewport with touch emulation on — (1) document.querySelectorAll('[data-testid=hero-stone-section] svg').length === 0, (2) getComputedStyle(document.querySelector('.grain'),'::after').display === 'none', (3) document.documentElement.className does NOT contain 'lenis', (4) window.scrollTo is immediate. On desktop the opposite must hold. Hero image a63cefb9…jpeg is 1102 KB and still the biggest single asset on Home.",
+  "rca of the issue": "User-reported mobile jank RCA: five compounding causes were identified and gated off on mobile — (a) SVG feTurbulence+feDisplacementMap+feBlend chain re-evaluated per scroll frame; (b) React setState per scroll frame re-rendering the whole hero; (c) fixed animated grain::after overlay causing full-viewport repaints; (d) parallax background-image layers with mixBlendMode causing composited repaints; (e) Lenis rAF loop running on touch fighting native momentum; (f) 6-pass CSS filter stack on .graded images. Verified: (a)+(b) gated by useHeavyMotion + imperative setAttribute; (c) via media query display:none; (d) Parallax returns null; (e) isTouchDevice() early return in App.js; (f) reduced to 2-pass filter under 1024px. Measured post-fix mobile scroll ≈57 FPS, 1 long frame in 3s. Remaining bottleneck if any: 1.1 MB hero image."
+}

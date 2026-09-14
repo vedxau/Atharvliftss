@@ -1,0 +1,31 @@
+{
+  "summary": "Regression on rebrand + Resend integration. Backend 5/5 pytest passing (test_inquiries.py tightened to assert `id` is returned and `_id` is NOT exposed on both POST and GET). Backend logs show 'RESEND_API_KEY not set — skipping inquiry email notification' warning on each create, and NO 500s — the fire-and-forget notify task never breaks the request. Frontend verified across all 7 routes at desktop (1920x1080) and mobile (390x844): no old-identity references (Aarav / aarav.chisel / 919876543210 / Mumbai / aaravmehta), 0 broken images and 0 hidden <img> elements on any page (ClipIn/reveal fix confirmed), 0 horizontal overflow, correct branding (wa.me/919527471066, instagram.com/Atharvliftss, mailto:Info@Atharvliftss.in) on every page. Home hero renders 'THE PHYSIQUE IS THE SCULPTURE.' with both CTAs (Book a Free Consult / See the Programs) and the stone-graded photo visible (screenshot). Contact form: empty submit shows toast 'Name and a phone or email are needed.'; valid submission renders data-testid='inquiry-success' and record is retrievable via GET /api/inquiries. Mobile hamburger overlay opens with all 7 nav items visible (screenshot). No console JS errors on any page. Testimonials/stats copy per spec.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_inquiries.py",
+    "/app/test_reports/pytest/pytest_results.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "server.py: create_inquiry uses asyncio.create_task(_notify_owner(...)) — fire-and-forget task is never awaited and exceptions are only caught inside _notify_owner; acceptable here because the function already try/excepts, but consider a global task registry or BackgroundTasks (FastAPI) for observability.",
+    "server.py: created_at stored as ISO string; sort('created_at', -1) currently relies on lexicographic ordering (works for ISO-8601 UTC Z-suffix, but not once a locale/offset is introduced). Prefer datetime type.",
+    "server.py: OWNER_EMAIL default is hard-coded to Info@Atharvliftss.in in code — fine, but ensure it stays in sync with .env (which already defines it).",
+    "No rate limiting on POST /api/inquiries — public marketing endpoint; consider a lightweight IP throttle before launch to prevent spam once Resend is wired up."
+  ],
+  "updated_files": ["/app/backend/tests/test_inquiries.py"],
+  "success_rate": {"backend": "100% (5/5 tests)", "frontend": "100% of tested flows"},
+  "test_credentials": "None — public marketing site, no auth.",
+  "seed_data_creation": "Two TEST_-prefixed inquiries (TEST_Priya via pytest, TEST_Regression2 via Playwright contact form) inserted into MongoDB inquiries collection.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Both bugs from iteration 1 are fixed: (1) ClipIn/LineRevealOnScroll now reveal correctly — 0 hidden imgs across all 7 pages; (2) Inquiry response returns `id` (no `_id`). Resend is gracefully no-op'd via the RESEND_API_KEY guard in _notify_owner. When testing hero headline text via evaluate(), note that letters are split across spans for reveal animations — use screenshots or check for individual words rather than the full sentence.",
+  "rca of the issue": "No new bugs found this iteration. Prior iteration bugs (ClipIn reveal + `_id` in response) both verified fixed."
+}
